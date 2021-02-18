@@ -1,0 +1,61 @@
+%filter in the Fourier domain
+close all
+clear
+%% load a test image and convert to greyscale
+input=double(rgb2gray(imread('lena_std.tif')))/255;
+figure(1)
+imagesc(input),colormap('gray');title('Org image')
+
+%% calculate the Fourier transform
+INPUT=fftshift(fft2(fftshift(input)));
+figure(2)
+imagesc(log(1+abs(INPUT))),title('Log of FFT')
+
+%% generate a Gaussian filter
+lowpass=gaussian2D(512,.4,2);
+figure(3)
+surfl(lowpass),shading interp, axis tight,title('Low pass filter')
+
+%% multiply in Fourier domain
+FIL=INPUT.*lowpass;
+figure(4)
+imagesc(abs(fftshift(ifft2(fftshift(FIL)))));colormap('gray'),title('Low passed filter');
+
+%% make a high pass filter
+highpass=1-lowpass;
+figure(5)
+surfl(highpass),shading interp, axis tight,title('High pass');
+
+%% Multiply in Fourier domain
+FIL=INPUT.*highpass;
+figure(6)
+imagesc(abs(fftshift(ifft2(fftshift(FIL)))));colormap('gray'),title('High passed filtered image');
+
+
+%% periodic noise removal
+% make the noise and add to image
+x=linspace(-pi,pi,512);
+[X,Y]=meshgrid(x);
+freq=100;
+noise=sin(X*freq).*sin(Y*freq);
+img=noise+input;%-mean(input(:));
+figure(7)
+imagesc(img),colormap('gray'),title('Noisy image')
+
+%% Fourier transform
+figure(8)
+INPUT=fftshift(fft2(fftshift(img)));
+imagesc(log(1+abs(INPUT))),title('FFT of noisy image')
+
+%% make a mask
+figure(9)
+mask=ones(512);
+w=10;
+mask(256-freq-w:256-freq+w,256-freq-w:256-freq+w)=0;
+mask(256+freq-w:256+freq+w,256+freq-w:256+freq+w)=0;
+mask(256-freq-w:256-freq+w,256+freq-w:256+freq+w)=0;
+mask(256+freq-w:256+freq+w,256-freq-w:256-freq+w)=0;
+imagesc(mask),colormap('gray'),title('mask')
+%% filter the image and convert back to space domain
+figure(10)
+imagesc(abs(fftshift(ifft2(fftshift(mask.*INPUT))))),colormap('gray'),title('filtered image')
